@@ -5,3 +5,8 @@
 /PineFlash_Installer.exe
 /pineflash*
 /libs
+
+# Build tools
+blisp
+blisp-*
+*.zip
