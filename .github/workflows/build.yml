@@ -221,9 +221,86 @@ jobs:
         name: pineflash-${{ matrix.name }}.dmg
         path: PineFlash-${{ matrix.name }}.dmg
 
+  build-macos-universal:
+    runs-on: macos-latest
+    needs: build-macos
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download x86_64 binary
+      uses: actions/download-artifact@v4
+      with:
+        name: pineflash-macos-x86_64
+        path: ./x86_64
+        
+    - name: Download aarch64 binary
+      uses: actions/download-artifact@v4
+      with:
+        name: pineflash-macos-aarch64
+        path: ./aarch64
+        
+    - name: Create universal binary
+      run: |
+        # Create universal binary using lipo
+        lipo -create -output pineflash-universal \
+          ./x86_64/pineflash \
+          ./aarch64/pineflash
+        
+        # Verify the universal binary
+        echo "Universal binary architectures:"
+        lipo -info pineflash-universal
+        
+        # Make it executable
+        chmod +x pineflash-universal
+        
+    - name: Create universal app bundle and DMG
+      run: |
+        APP_NAME="PineFlash"
+        APP_DIR="${APP_NAME}.app"
+        
+        # Create app bundle structure
+        mkdir -p "${APP_DIR}/Contents/MacOS"
+        mkdir -p "${APP_DIR}/Contents/Resources"
+        
+        # Copy universal binary
+        cp pineflash-universal "${APP_DIR}/Contents/MacOS/pineflash"
+        chmod +x "${APP_DIR}/Contents/MacOS/pineflash"
+        
+        # Copy Info.plist
+        cp macos/Info.plist "${APP_DIR}/Contents/"
+        
+        # Create icon
+        if [ -f "assets/pine64logo.png" ]; then
+          sips -s format icns "assets/pine64logo.png" --out "${APP_DIR}/Contents/Resources/AppIcon.icns" || true
+        fi
+        
+        # Create DMG
+        hdiutil create -volname "${APP_NAME}" -srcfolder "${APP_DIR}" -ov -format UDZO "PineFlash-macOS-universal.dmg"
+        
+        # Also create a zip for easier distribution
+        zip -r "PineFlash-macOS-universal.zip" "${APP_DIR}"
+        
+    - name: Upload universal binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: pineflash-macos-universal
+        path: pineflash-universal
+        
+    - name: Upload universal DMG
+      uses: actions/upload-artifact@v4
+      with:
+        name: pineflash-macos-universal.dmg
+        path: PineFlash-macOS-universal.dmg
+        
+    - name: Upload universal app bundle zip
+      uses: actions/upload-artifact@v4
+      with:
+        name: pineflash-macos-universal.zip
+        path: PineFlash-macOS-universal.zip
+
   create-release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build-linux, build-appimage, build-windows, build-macos]
+    needs: [build-linux, build-appimage, build-windows, build-macos, build-macos-universal]
     runs-on: ubuntu-latest
     steps:
     - name: Download all artifacts
@@ -258,6 +335,12 @@ jobs:
           pineflash-macos-x86_64.dmg/PineFlash-macos-x86_64.dmg.sha256
           pineflash-macos-aarch64.dmg/PineFlash-macos-aarch64.dmg
           pineflash-macos-aarch64.dmg/PineFlash-macos-aarch64.dmg.sha256
+          pineflash-macos-universal/pineflash-universal
+          pineflash-macos-universal/pineflash-universal.sha256
+          pineflash-macos-universal.dmg/PineFlash-macOS-universal.dmg
+          pineflash-macos-universal.dmg/PineFlash-macOS-universal.dmg.sha256
+          pineflash-macos-universal.zip/PineFlash-macOS-universal.zip
+          pineflash-macos-universal.zip/PineFlash-macOS-universal.zip.sha256
         draft: true
         prerelease: false
         generate_release_notes: true

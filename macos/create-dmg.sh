@@ -12,7 +12,7 @@ echo -e "${GREEN}Creating macOS installer for PineFlash...${NC}"
 # Variables
 APP_NAME="PineFlash"
 BINARY_NAME="pineflash"
-VERSION=$(grep '^version' ../Cargo.toml | sed 's/.*"\(.*\)".*/\1/')
+VERSION=$(grep '^version' ../Cargo.toml | sed 's/.*"\(.*\)".*/\1/' || echo "0.5.5")
 BUILD_DIR="../target/release"
 APP_DIR="$APP_NAME.app"
 DMG_NAME="PineFlash-$VERSION-macOS.dmg"
