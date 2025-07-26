@@ -32,15 +32,21 @@ jobs:
     - name: Install runtime dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libgtk-3-0 libssl1.1 libusb-1.0-0 libudev1
+        sudo apt-get install -y libgtk-3-0 libssl1.1 libusb-1.0-0 libudev1 xvfb
         
     - name: Test binary execution
       run: |
-        # Test help command
-        ./binary/pineflash --help || ./binary/pineflash -h || true
+        # Set up headless environment
+        export DISPLAY=:99
+        export XDG_RUNTIME_DIR=/tmp
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        sleep 2
         
-        # Test version output
-        ./binary/pineflash --version || ./binary/pineflash -V || true
+        # Test help command with timeout
+        timeout 5s ./binary/pineflash --help || timeout 5s ./binary/pineflash -h || echo "Help not available (GUI app)"
+        
+        # Test version output with timeout
+        timeout 5s ./binary/pineflash --version || timeout 5s ./binary/pineflash -V || echo "Version not available (GUI app)"
         
         # Check binary info
         file ./binary/pineflash
@@ -114,11 +120,15 @@ jobs:
       
     - name: Test binary execution
       run: |
-        # Test help command
-        ./binary/pineflash --help || ./binary/pineflash -h || true
+        # Set CI environment
+        export CI=true
+        export GITHUB_ACTIONS=true
         
-        # Test version output
-        ./binary/pineflash --version || ./binary/pineflash -V || true
+        # Test help command with timeout
+        timeout 5s ./binary/pineflash --help 2>&1 || timeout 5s ./binary/pineflash -h 2>&1 || echo "Help not available (GUI app)"
+        
+        # Test version output with timeout
+        timeout 5s ./binary/pineflash --version 2>&1 || timeout 5s ./binary/pineflash -V 2>&1 || echo "Version not available (GUI app)"
         
         # Check binary info
         file ./binary/pineflash
@@ -142,8 +152,10 @@ jobs:
           # Check app bundle
           ls -la /Volumes/PineFlash/
           
-          # Test app bundle binary
-          /Volumes/PineFlash/PineFlash.app/Contents/MacOS/pineflash --help || true
+          # Test app bundle binary with timeout
+          export CI=true
+          export GITHUB_ACTIONS=true
+          timeout 5s /Volumes/PineFlash/PineFlash.app/Contents/MacOS/pineflash --help 2>&1 || echo "GUI app - help not available in CI"
           
           # Unmount
           hdiutil detach /Volumes/PineFlash

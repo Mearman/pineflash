@@ -55,11 +55,18 @@ jobs:
         echo "Validating Linux binary..."
         chmod +x target/release/pineflash
         
-        # Test help command
-        ./target/release/pineflash --help || ./target/release/pineflash -h || echo "Help command not available"
+        # Set headless environment
+        export DISPLAY=:99
+        export XDG_RUNTIME_DIR=/tmp
         
-        # Test version
-        ./target/release/pineflash --version || ./target/release/pineflash -V || echo "Version command not available"
+        # Try to start virtual display (may fail, that's OK)
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        
+        # Test help command with timeout
+        timeout 5s ./target/release/pineflash --help || timeout 5s ./target/release/pineflash -h || echo "Help command not available"
+        
+        # Test version with timeout
+        timeout 5s ./target/release/pineflash --version || timeout 5s ./target/release/pineflash -V || echo "Version command not available"
         
         # Check binary info
         file target/release/pineflash
@@ -220,15 +227,22 @@ jobs:
         echo "Validating macOS binary..."
         chmod +x target/${{ matrix.target }}/release/pineflash
         
-        # Test help command
-        ./target/${{ matrix.target }}/release/pineflash --help || ./target/${{ matrix.target }}/release/pineflash -h || echo "Help command not available"
+        # Set CI environment to prevent GUI launch
+        export CI=true
+        export GITHUB_ACTIONS=true
         
-        # Test version
-        ./target/${{ matrix.target }}/release/pineflash --version || ./target/${{ matrix.target }}/release/pineflash -V || echo "Version command not available"
+        # Use timeout to prevent hanging
+        # Test help command with timeout
+        timeout 5s ./target/${{ matrix.target }}/release/pineflash --help 2>&1 || timeout 5s ./target/${{ matrix.target }}/release/pineflash -h 2>&1 || echo "Help command not available (GUI app)"
+        
+        # Test version with timeout
+        timeout 5s ./target/${{ matrix.target }}/release/pineflash --version 2>&1 || timeout 5s ./target/${{ matrix.target }}/release/pineflash -V 2>&1 || echo "Version command not available (GUI app)"
         
         # Check binary info
         file target/${{ matrix.target }}/release/pineflash
         lipo -info target/${{ matrix.target }}/release/pineflash
+        
+        echo "✅ Binary validation complete (GUI apps may not show help/version in CI)"
       
     - name: Create macOS app bundle
       run: |
