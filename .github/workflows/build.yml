@@ -49,6 +49,11 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
       
+    - name: Validate binary
+      run: |
+        chmod +x tests/smoke-test.sh
+        ./tests/smoke-test.sh target/release/pineflash
+      
     - name: Upload Linux binary
       uses: actions/upload-artifact@v4
       with:
@@ -135,6 +140,12 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
       
+    - name: Validate binary
+      shell: pwsh
+      run: |
+        # Run smoke tests
+        ./tests/smoke-test.ps1 -BinaryPath "./target/release/pineflash.exe"
+      
     - name: Upload Windows executable
       uses: actions/upload-artifact@v4
       with:
@@ -182,6 +193,11 @@ jobs:
     - name: Run tests (x86_64 only)
       if: matrix.target == 'x86_64-apple-darwin'
       run: cargo test --verbose
+      
+    - name: Validate binary
+      run: |
+        chmod +x tests/smoke-test.sh
+        ./tests/smoke-test.sh target/${{ matrix.target }}/release/pineflash
       
     - name: Create macOS app bundle
       run: |
