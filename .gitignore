@@ -10,3 +10,8 @@
 blisp
 blisp-*
 *.zip
+
+# macOS artifacts
+*.app
+*.dmg
+.DS_Store
